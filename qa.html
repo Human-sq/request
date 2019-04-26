@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="shortcut icon" href="./favicon.png">
+    <link rel="Bookmark" href="./favicon.png">
+    <title>问投QA</title>
+    <style>
+        body{
+            font-family: -apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hiragino Sans GB','Microsoft YaHei','Helvetica Neue',Helvetica,Arial,sans-serif,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol';
+        }
+        .query-body {
+            margin: 30px 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .query-body label {
+            font-size: 16px;
+        }
+        #query-btn{
+            margin-left: 10px;
+            color: #fff;
+            background-color: #2395f1;
+            border-color: #2395f1;
+            line-height: 1.5;
+            padding: 2px 14px;
+            font-size: 14px;
+            border-radius: 4px;
+            height: 28px;
+            border: 1px solid transparent;
+            display: inline-block;
+        }
+        #query-btn:focus, #query-btn:hover {
+            outline: 0;
+            color: #fff;
+            background-color: #40a9ff;
+            border-color: #40a9ff;
+        }
+        .input {
+            margin-left: 10px;
+            width: 60%;
+            max-width: 400px;
+            padding: 0px 6px;
+            height: 24px;
+            font-size: 12px;
+            line-height: 1.5;
+            color: rgba(13, 27, 62, 0.65);
+            background-color: #fff;
+            background-image: none;
+            border: 1px solid #d9d9d9;
+            border-radius: 4px;
+            transition: all .3s;
+        }
+        .table {
+            float: left;
+            width: 50%;
+            padding-bottom: 20px;
+        }
+        .table p {
+            font-size: 22px;
+        }
+        .table:nth-child(2) {
+            width: 45%;
+            margin-left: 5%
+        }
+        #result{
+            width: 90%;
+            margin: 20px auto;
+            display: none;
+        }
+        #result table {
+            width: 100%;
+            border: 1px solid #ebedf0;
+            border-collapse: collapse;
+            text-align: left;
+        }
+        #result table thead {
+            width: 100%;
+            text-align: center;
+            background-color: #6db6ea;
+            color: #fff;
+        }
+        #result table tbody tr{
+            border-bottom: 1px solid #e8e8e8;
+            width: 100%;
+            transition: all .3s,border 0s;
+        }
+        #result tbody tr:hover {
+            background: #e6f7ff;
+        }
+        #result table td, th {
+            padding: 8px;
+        }
+        #result table tr td:nth-child(1){
+            width: 20%;
+        }
+        #result table tr td:nth-child(2){
+            width: 80%;
+        }
+        @media (max-width: 1000px){
+            .input {
+                margin-left: 0;
+            }
+            .table {
+                clear: both;
+                width: 100%;
+            }
+            .table:nth-child(2) {
+                width: 100%;
+                margin-left: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="query-body">
+        <label>问题: </label>
+        <input class="input" type="text" id="orderno" onkeypress="return onKeyPress(event)"> 
+        <button id="query-btn" onclick="query()">查询</button>
+    </div>
+    
+    <div id="result">
+        <div class="table">
+            <p>只含进宝2万条</p>
+            <table id="local_result">
+                <tbody></tbody>
+            </table>
+        </div>
+        <div class="table">
+            <p>进宝2万条+500多万公开问答对</p>
+            <table id="public_result">
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+    <script>
+        function insetData (data,tbId) {
+            var arrname = ['问题','回答'];
+            var table = document.getElementById(tbId);
+            var tb = table.getElementsByTagName('tbody');
+            var isthead = table.getElementsByTagName('thead');
+            tb.length? table.removeChild(tb[0]): null;
+            isthead.length? table.removeChild(isthead[0]): null;
+            var Tbody = document.createElement("tbody");
+            var thead = document.createElement('thead');
+            var tr = document.createElement('tr');
+            for (var i = 0; i < arrname.length; i++) {
+                var th = document.createElement('th');
+                th.innerHTML = arrname[i];
+                tr.appendChild(th);
+            }
+            thead.appendChild(tr);
+            table.appendChild(thead);
+            data[tbId].map(function(v) {
+                var newRow = Tbody.insertRow();
+                var newcellname = newRow.insertCell(0);
+                newcellname.innerHTML = v.sim_question;
+                newcellname = newRow.insertCell(1);
+                newcellname.innerHTML = v.sim_answer;
+            });
+            table.appendChild(Tbody);
+        }
+        function onKeyPress(e) {
+            var keyCode = null;
+            if(e.which)
+                keyCode = e.which;
+            else if(e.keyCode) 
+                keyCode = e.keyCode;
+            if(keyCode == 13) {
+                query();
+                return false;
+            }
+            return true;
+        }
+        function query() {
+            var id = document.getElementById('orderno').value;
+            var btn = document.getElementById('query-btn');
+            btn.setAttribute("disabled", true);
+            if (window.fetch) {
+                fetch('/api/qa?question=' + id)
+                .then(function(res){
+                    return res.text()
+                })
+                .then(function(res){
+                    res = JSON.parse(res);
+                    document.getElementById('result').style.display = 'block';
+                    btn.removeAttribute("disabled");
+                    insetData(res.data,'local_result');
+                    insetData(res.data,'public_result');
+                })
+            } else {
+                var httpRequest = new XMLHttpRequest();//第一步：建立所需的对象
+                httpRequest.open('GET', '/api/qa?question=' + encodeURI(id), true);//第二步：打开连接  将请求参数写在url中  ps:"./Ptest.php?name=test&nameone=testone"
+                // httpRequest.setRequestHeader('Content-Type', 'application/json;charset=utf-8')
+                httpRequest.send();//第三步：发送请求  将请求参数写在URL中
+                httpRequest.onreadystatechange = function () {
+                    if (httpRequest.readyState == 4 && httpRequest.status == 200) {
+                        var res = JSON.parse(httpRequest.responseText);//获取到json字符串，还需解析
+                        document.getElementById('result').style.display = 'block';
+                        btn.removeAttribute("disabled");
+                        insetData(res.data,'local_result');
+                        insetData(res.data,'public_result');
+                    }
+                };
+            }
+            
+            
+        }
+    </script>
+</body>
+</html>
